@@ -174,6 +174,6 @@ Priority:
 ## License
 MIT License — free to use, modify and distribute
 
-## Built by
+
 Built with ❤️ by [Your Name]
 Powered by LeadAura v1.0.0
