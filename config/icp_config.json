@@ -1,0 +1,18 @@
+{
+  "platform_name": "LeadAura",
+  "version": "1.0.0",
+  "icp": {
+    "target_industries": ["SaaS", "FinTech"],
+    "min_employees": 10,
+    "max_employees": 200,
+    "target_locations": ["France", "Germany", "UAE", "Tunisia", "UK", "KSA", "Morocoo"],
+    "keywords": ["automation", "digital transformation", "growth", "scaling"]
+  },
+  "scoring_weights": {
+    "industry_match": 30,
+    "size_match": 25,
+    "location_match": 20,
+    "tech_stack_detected": 15,
+    "keyword_match": 10
+  }
+}

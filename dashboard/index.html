@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadAura Dashboard</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* CSS Variables defining the explicit color specs */
+        :root {
+            --bg-color: #0a0f1e;
+            --card-bg: #111a33;
+            --primary: #00d4ff;
+            --highlight: #ffd700;
+            --text-main: #f0f4f8;
+            --text-muted: #8a9bb8;
+            --high-prio: #2dd4bf;
+            --med-prio: #facc15;
+            --low-prio: #f87171;
+            --border-col: #1e293b;
+            --gradient-1: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(10, 15, 30, 0) 100%);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); line-height: 1.6; }
+        
+        /* Standard Layout wrappers */
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        /* Navbar components */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid var(--border-col); margin-bottom: 30px; }
+        .logo { font-size: 24px; font-weight: 700; color: var(--text-main); letter-spacing: 1px; }
+        .logo span { color: var(--primary); }
+        .nav-links { display: flex; gap: 20px; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-weight: 500; transition: color 0.3s; }
+        .nav-links a:hover { color: var(--primary); }
+        
+        .run-btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s; }
+        .run-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3); }
+        .run-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        /* Animated loader spinner */
+        .spinner { border: 3px solid rgba(0,0,0,0.1); border-left-color: #000; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* Header Stat Cards Array Components */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--card-bg); border: 1px solid var(--border-col); border-radius: 12px; padding: 24px; background-image: var(--gradient-1); transition: transform 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); border-color: rgba(0, 212, 255, 0.3); }
+        .stat-card .icon { font-size: 24px; margin-bottom: 10px; display: inline-block; }
+        .stat-card .value { font-size: 32px; font-weight: 700; margin-bottom: 5px; color: var(--text-main); }
+        .stat-card .label { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Chart row boxes wrapper */
+        .charts-row { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 30px; }
+        .chart-card { background: var(--card-bg); border: 1px solid var(--border-col); border-radius: 12px; padding: 24px; }
+        .chart-card h3 { margin-bottom: 20px; font-size: 16px; color: var(--text-muted); text-transform: uppercase; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        
+        /* Form Filters and Input groups */
+        .filters { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+        .search-box { flex-grow: 1; min-width: 250px; }
+        .search-box input { width: 100%; padding: 12px 16px; background: var(--card-bg); border: 1px solid var(--border-col); border-radius: 8px; color: var(--text-main); font-family: inherit; }
+        .search-box input:focus { outline: none; border-color: var(--primary); }
+        
+        select { padding: 12px; background: var(--card-bg); border: 1px solid var(--border-col); border-radius: 8px; color: var(--text-main); font-family: inherit; cursor: pointer; }
+        select:focus { outline: none; border-color: var(--primary); }
+        
+        /* Lists output tables mapping */
+        .table-card { background: var(--card-bg); border: 1px solid var(--border-col); border-radius: 12px; overflow: hidden; margin-bottom: 30px; }
+        .table-header { padding: 20px 24px; border-bottom: 1px solid var(--border-col); display: flex; justify-content: space-between; align-items: center; }
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 16px 24px; font-size: 13px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; border-bottom: 1px solid var(--border-col); }
+        td { padding: 16px 24px; font-size: 14px; border-bottom: 1px solid rgba(30, 41, 59, 0.5); }
+        tr:hover { background-color: rgba(255,255,255,0.02); }
+        tr:last-child td { border-bottom: none; }
+        
+        .company-name { font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+        .website-link { color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; }
+        .website-link:hover { text-decoration: underline; }
+        
+        /* Metric Badges UI classes */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .badge.high { background: rgba(45, 212, 191, 0.1); color: var(--high-prio); border: 1px solid rgba(45, 212, 191, 0.2); }
+        .badge.medium { background: rgba(250, 204, 21, 0.1); color: var(--med-prio); border: 1px solid rgba(250, 204, 21, 0.2); }
+        .badge.low { background: rgba(248, 113, 113, 0.1); color: var(--low-prio); border: 1px solid rgba(248, 113, 113, 0.2); }
+        
+        /* HTML Progress wrapper mappings */
+        .score-cell { display: flex; align-items: center; gap: 10px; }
+        .progress-bg { width: 80px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .progress-bar { height: 100%; border-radius: 3px; }
+        
+        /* Technologies Tags mappings */
+        .tech-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        .tech-tag { font-size: 11px; padding: 2px 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: var(--highlight); }
+        
+        /* Global State Components */
+        .loading-overlay { display: none; padding: 40px; text-align: center; color: var(--text-muted); }
+        .error-message { display: none; padding: 20px; background: rgba(248, 113, 113, 0.1); color: var(--low-prio); border: 1px solid var(--low-prio); border-radius: 8px; margin-bottom: 20px; }
+        
+        footer { margin-top: 50px; text-align: center; padding: 20px 0; border-top: 1px solid var(--border-col); color: var(--text-muted); font-size: 14px; }
+        footer a { color: var(--primary); text-decoration: none; }
+        
+        /* Floating Toast Elements */
+        .toast { position: fixed; bottom: 20px; right: 20px; background: var(--card-bg); border: 1px solid var(--primary); padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); transform: translateY(150%); transition: transform 0.3s; z-index: 1000; }
+        .toast.show { transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Error Banner shown locally -->
+        <div id="api-error" class="error-message">⚠️ Cannot connect to the API. Check that FastAPI is actively running on HTTP port 8000 natively.</div>
+
+        <!-- Navigation Header -->
+        <header>
+            <div class="logo">Lead<span>Aura</span></div>
+            <div class="nav-links">
+                <a href="#">Dashboard</a>
+                <a href="#leads-table">Leads</a>
+            </div>
+            <button class="run-btn" id="run-pipeline-btn" onclick="runPipeline()">
+                <span class="spinner" id="btn-spinner"></span>
+                <span>Run Pipeline</span>
+            </button>
+        </header>
+
+        <!-- Dynamic Statistics Variables Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="icon">🎯</span>
+                <div class="value" id="stat-total">--</div>
+                <div class="label">Total Leads</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🔥</span>
+                <div class="value" id="stat-high">--</div>
+                <div class="label">High Priority</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📊</span>
+                <div class="value" id="stat-medium">--</div>
+                <div class="label">Medium Priority</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">💤</span>
+                <div class="value" id="stat-low">--</div>
+                <div class="label">Low Priority</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">⭐</span>
+                <div class="value" id="stat-avg">--</div>
+                <div class="label">Average Score</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🛠️</span>
+                <div class="value" id="stat-tech">--</div>
+                <div class="label">With Tech Stack</div>
+            </div>
+        </div>
+
+        <!-- Canvas Rendering Frames Wrapper -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <h3>Priority Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="priorityChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3>Top Industries</h3>
+                <div class="chart-container">
+                    <canvas id="industryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parameters Request Injector Components -->
+        <div class="filters">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search parameters (keywords, companies, regions)..." onkeyup="handleSearchInputs(event)">
+            </div>
+            <select id="filter-industry" onchange="applyFilters()">
+                <option value="">All Industries</option>
+                <option value="SaaS">SaaS</option>
+                <option value="FinTech">FinTech</option>
+            </select>
+            <select id="filter-location" onchange="applyFilters()">
+                <option value="">All Locations</option>
+                <option value="UAE">UAE</option>
+                <option value="UK">UK</option>
+                <option value="France">France</option>
+                <option value="Germany">Germany</option>
+                <option value="Tunisia">Tunisia</option>
+                <option value="KSA">KSA</option>
+                <option value="Morocco">Morocco</option>
+            </select>
+            <select id="filter-priority" onchange="applyFilters()">
+                <option value="">All Priorities</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+        </div>
+
+        <!-- Iterative Tables Output -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3><span id="results-count">0</span> Leads Exported</h3>
+            </div>
+            <div id="table-loader" class="loading-overlay">Awaiting leads connection...</div>
+            <div class="table-wrapper">
+                <table id="leads-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Company Name</th>
+                            <th>Industry</th>
+                            <th>Location</th>
+                            <th>Score</th>
+                            <th>Priority</th>
+                            <th>Tech Stack</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leads-body">
+                        <!-- DOM injected natively inside script elements -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Root Links Footer -->
+        <footer>
+            <p>Powered by LeadAura v1.0.0 | <a href="http://localhost:8000/docs" target="_blank">View Raw API Schema Documentation</a></p>
+        </footer>
+    </div>
+
+    <!-- Active Floating Toast Events Component -->
+    <div id="toast" class="toast">Pipeline completed successfully!</div>
+
+    <!-- Javascript Handlers Mapping Output Logic -->
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let priorityChartInstance = null;
+        let industryChartInstance = null;
+
+        // Auto trigger events on load matching logic
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchDashboardData();
+            // Automatically loop data logic dynamically over 60 seconds
+            setInterval(fetchDashboardData, 60000);
+        });
+
+        // Trigger wrapper managing UI endpoints checks mapping all calls
+        async function fetchDashboardData() {
+            try {
+                document.getElementById('api-error').style.display = 'none';
+                await Promise.all([
+                    loadStats(),
+                    applyFilters() // Forces table to update with active selections
+                ]);
+            } catch (error) {
+                console.error("API Fetch execution failure runtime:", error);
+                document.getElementById('api-error').style.display = 'block';
+            }
+        }
+
+        // Resolving variables metrics globally 
+        async function loadStats() {
+            const res = await fetch(`${API_BASE}/stats`);
+            if (!res.ok) throw new Error('API request failed logic fetch');
+            const data = await res.json();
+            
+            // Push active logic states mapped onto elements natively
+            document.getElementById('stat-total').innerText = data.total_leads;
+            document.getElementById('stat-high').innerText = data.high_priority;
+            document.getElementById('stat-medium').innerText = data.medium_priority;
+            document.getElementById('stat-low').innerText = data.low_priority;
+            document.getElementById('stat-avg').innerText = data.average_score;
+            document.getElementById('stat-tech').innerText = data.leads_with_tech_stack;
+
+            // Trigger visual contexts 
+            renderPriorityChart(data.high_priority, data.medium_priority, data.low_priority);
+            await loadIndustryChartByGrouping();
+        }
+        
+        // Simulating the grouping output map to retrieve individual fields explicitly to generate logic
+        async function loadIndustryChartByGrouping() {
+            try {
+                const res = await fetch(`${API_BASE}/leads?limit=5000`);
+                const data = await res.json();
+                
+                const indCounts = {};
+                data.leads.forEach(l => {
+                    const ind = l.industry || 'Unknown';
+                    indCounts[ind] = (indCounts[ind] || 0) + 1;
+                });
+                
+                // Parse Top entries mathematically mapping output layers
+                const sorted = Object.keys(indCounts).sort((a,b) => indCounts[b] - indCounts[a]).slice(0,5);
+                const counts = sorted.map(k => indCounts[k]);
+                
+                renderIndustryChart(sorted, counts);
+            } catch(e) {
+                console.error("Error drawing industry bar instances: ", e);
+            }
+        }
+
+        // Output Leads specific values wrapping
+        async function loadLeads(searchQuery = '', industry = '', location = '', priority = '') {
+            const tbody = document.getElementById('leads-body');
+            const loader = document.getElementById('table-loader');
+            
+            tbody.innerHTML = '';
+            loader.style.display = 'block';
+
+            try {
+                let url = `${API_BASE}/leads?limit=20`;
+                
+                if (searchQuery) {
+                    url = `${API_BASE}/search?q=${encodeURIComponent(searchQuery)}`;
+                } else {
+                    if (industry) url += `&industry=${encodeURIComponent(industry)}`;
+                    if (location) url += `&location=${encodeURIComponent(location)}`;
+                    if (priority) url += `&priority=${encodeURIComponent(priority)}`;
+                }
+
+                // Default top leads route behavior if empty inputs logic specifies requirements explicitly
+                if (!searchQuery && !industry && !location && !priority) {
+                    url = `${API_BASE}/top-leads?limit=20`;
+                }
+
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Query fault context mapped execution');
+                const data = await res.json();
+                
+                const leadsArr = Array.isArray(data) ? data : data.leads;
+                
+                // Explicitly bind sorts descending metrics globally
+                leadsArr.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+                document.getElementById('results-count').innerText = leadsArr.length;
+                loader.style.display = 'none';
+
+                if (leadsArr.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#8a9bb8;">No leads match selection metrics currently mapped state.</td></tr>';
+                    return;
+                }
+
+                leadsArr.forEach((lead, index) => {
+                    const tr = document.createElement('tr');
+                    
+                    const prioClass = (lead.priority || 'low').toLowerCase();
+                    
+                    let progressColor = '#2dd4bf'; // High (Green)
+                    if (prioClass === 'medium') progressColor = '#facc15'; // Medium (Yellow)
+                    if (prioClass === 'low') progressColor = '#f87171'; // Low (Red)
+                    
+                    const techs = (lead.tech_stack || []).slice(0, 4);
+                    const techHtml = techs.length > 0 
+                        ? `<div class="tech-tags">${techs.map(t => `<span class="tech-tag">${t}</span>`).join('')}</div>`
+                        : '<span style="color:var(--text-muted);font-size:12px;">--</span>';
+
+                    let websiteHtml = '';
+                    if (lead.website) {
+                        websiteHtml = `<a href="${lead.website.startsWith('http') ? lead.website : 'https://'+lead.website}" target="_blank" class="website-link" title="Navigate Context Origin">🔗</a>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td>#${index + 1}</td>
+                        <td>
+                            <div class="company-name">${lead.company_name || 'N/A'} ${websiteHtml}</div>
+                        </td>
+                        <td>${lead.industry || '--'}</td>
+                        <td>${lead.location || '--'}</td>
+                        <td>
+                            <div class="score-cell">
+                                <span>${lead.score || 0}</span>
+                                <div class="progress-bg">
+                                    <div class="progress-bar" style="width: ${lead.score || 0}%; background-color: ${progressColor}"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge ${prioClass}">${lead.priority || 'Low'}</span></td>
+                        <td>${techHtml}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (error) {
+                console.error("Payload parse load metric failure:", error);
+                loader.style.display = 'none';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#f87171;">Query extraction parameters exception failure context logic.</td></tr>';
+            }
+        }
+
+        // Timing event filters mapping keystroke latency variables logic handling inputs internally
+        let searchTimeout;
+        function handleSearchInputs(e) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                applyFilters();
+            }, 600);
+        }
+
+        function applyFilters() {
+            const q = document.getElementById('search-input').value;
+            const ind = document.getElementById('filter-industry').value;
+            const loc = document.getElementById('filter-location').value;
+            const prio = document.getElementById('filter-priority').value;
+            
+            // Invoke table loading mapped arrays output explicit dependencies inputs
+            loadLeads(q, ind, loc, prio);
+        }
+
+        // POST Hook to Trigger Engine Components Output Native States
+        async function runPipeline() {
+            const btn = document.getElementById('run-pipeline-btn');
+            const spinner = document.getElementById('btn-spinner');
+            
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            
+            try {
+                const res = await fetch(`${API_BASE}/run-pipeline`, { method: 'POST' });
+                if (!res.ok) throw new Error('Endpoint rejection payload context metric error');
+                const data = await res.json();
+                
+                showToast(`SUCCESS! Pipeline completed natively. Added ${data.companies_enriched} processed leads via API extraction mappings.`);
+                
+                // Triggers dynamic content reloads implicitly
+                await fetchDashboardData();
+            } catch (error) {
+                console.error(error);
+                showToast("Runtime architecture failure explicitly halting components.", true);
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        }
+
+        // General event handler mappings output parameters visually
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.borderColor = isError ? '#f87171' : 'var(--primary)';
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+
+        // Dynamic Chart Objects Canvas Renders Mapping Logics Native Overrides Configurations Settings
+        function renderPriorityChart(high, medium, low) {
+            const ctx = document.getElementById('priorityChart').getContext('2d');
+            if (priorityChartInstance) priorityChartInstance.destroy();
+
+            Chart.defaults.color = '#8a9bb8';
+            Chart.defaults.font.family = 'Inter';
+
+            priorityChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['High', 'Medium', 'Low'],
+                    datasets: [{
+                        data: [high, medium, low],
+                        backgroundColor: ['#2dd4bf', '#facc15', '#f87171'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function renderIndustryChart(labels, data) {
+            const ctx = document.getElementById('industryChart').getContext('2d');
+            if (industryChartInstance) industryChartInstance.destroy();
+
+            industryChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Leads Evaluated',
+                        data: data,
+                        backgroundColor: function(context) {
+                            const chart = context.chart;
+                            const {ctx, chartArea} = chart;
+                            if (!chartArea) return '#00d4ff';
+                            let gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                            gradient.addColorStop(0, 'rgba(0, 212, 255, 0.4)');
+                            gradient.addColorStop(1, '#00d4ff');
+                            return gradient;
+                        },
+                        borderRadius: 6,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

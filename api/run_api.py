@@ -1,0 +1,9 @@
+import uvicorn
+import os
+import sys
+
+# Pushes standard path logic up so `main` resolves inside standard scope natively
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+if __name__ == "__main__":
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
