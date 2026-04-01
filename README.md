@@ -171,9 +171,3 @@ Priority:
 - Never commit `.env` to GitHub
 - Both are already in `.gitignore`
 
-## License
-MIT License — free to use, modify and distribute
-
-
-Built with ❤️ by [Your Name]
-Powered by LeadAura v1.0.
